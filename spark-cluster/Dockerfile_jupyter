@@ -1,0 +1,24 @@
+FROM jupyterhub/k8s-singleuser-sample:2.0.0
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y \
+    default-jdk wget
+
+ENV SPARK_JARS_PATH="/opt/spark/jars"
+RUN mkdir -p $SPARK_JARS_PATH
+
+# Add S3A support
+RUN wget -O /opt/spark/jars/hadoop-aws-3.3.4.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar
+RUN wget -O /opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
+
+# Add committer support
+RUN wget -O /opt/spark/jars/spark-hadoop-cloud_2.12-3.3.4.jar https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_2.12/3.3.4/spark-hadoop-cloud_2.12-3.3.4.jar
+
+COPY log4j2.properties /opt/spark/conf/log4j2.properties
+
+COPY executor_pod_template.yaml /opt/spark/conf/executor_pod_template.yaml
+
+USER ${NB_USER}
+

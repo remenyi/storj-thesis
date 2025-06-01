@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storj-gateway
+  namespace: storj
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storj-gateway
+  template:
+    metadata:
+      labels:
+        app: storj-gateway
+    spec:
+      containers:
+      - name: storj-gateway
+        image: storjlabs/gateway:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            ./gateway setup \
+              --access= \
+             --minio.access-key= \
+             --minio.secret-key= \
+              --non-interactive
+            ./gateway run
+        ports:
+        - containerPort: 7777
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: storj-gateway-service
+  namespace: storj
+spec:
+  selector:
+    app: storj-gateway
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 7777
+  type: ClusterIP

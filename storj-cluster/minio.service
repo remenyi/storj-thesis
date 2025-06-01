@@ -1,0 +1,17 @@
+[Unit]
+Description=MinIO
+Documentation=https://min.io/docs/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=remenyigergo
+Group=remenyigergo
+ExecStart=/home/remenyigergo/minio server /home/remenyigergo/data --console-address ":9001"
+Restart=always
+LimitNOFILE=65536
+Environment="MINIO_ROOT_USER="
+Environment="MINIO_ROOT_PASSWORD="
+
+[Install]
+WantedBy=multi-user.target

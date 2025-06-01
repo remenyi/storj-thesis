@@ -1,0 +1,16 @@
+[Unit]
+Description=Satellite Service
+After=network.target
+
+[Service]
+Type=simple
+User=remenyigergo
+WorkingDirectory=/home/remenyigergo
+Environment=PATH=/home/remenyigergo/go/bin:/usr/bin/:/usr/local/go:$PATH
+ExecStart=/home/remenyigergo/go/bin/storj-sim network run --storage-nodes=5 --satellites=0 --no-gateways
+Restart=never
+RestartSec=10
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

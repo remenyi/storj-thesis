@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    storj-gateway-sidecar: "true"
+spec:
+  containers:
+  - name: spark-kubernetes-driver
+  - name: storj-gateway-sidecar
+    image: storjlabs/gateway:latest
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "DEBUG: Checking environment variables..."
+        if [ -z "$STORJ_ACCESS_GRANT" ] || [ -z "$MINIO_ACCESS_KEY" ] || [ -z "$MINIO_SECRET_KEY" ]; then
+          echo "ERROR: One or more credential environment variables are not set from ConfigMap."
+          # Várakozás hiba esetén, hogy a logokat meg lehessen nézni
+          sleep infinity
+          exit 1
+        fi
+        echo "DEBUG: Environment variables seem to be set."
+
+        echo "Running Storj Gateway setup..."
+        ./gateway setup \
+          --access=$STORJ_ACCESS_GRANT \
+          --minio.access-key=$MINIO_ACCESS_KEY \
+          --minio.secret-key=$MINIO_SECRET_KEY \
+          --non-interactive
+        SETUP_EXIT_CODE=$?
+        if [ $SETUP_EXIT_CODE -ne 0 ]; then
+           echo "ERROR: Gateway setup failed with exit code $SETUP_EXIT_CODE."
+           sleep infinity # Hiba esetén itt maradunk, hogy lássuk a logot
+           exit 1
+        fi
+
+        echo "Running Storj Gateway..."
+        ./gateway run
+    ports:
+    - name: gateway-http
+      containerPort: 7777
+    env:
+      - name: STORJ_ACCESS_GRANT
+        valueFrom:
+          configMapKeyRef:
+            name: storj-gateway-config
+            key: access-grant
+      - name: MINIO_ACCESS_KEY
+        valueFrom:
+          configMapKeyRef:
+            name: storj-gateway-config
+            key: minio-access-key
+      - name: MINIO_SECRET_KEY
+        valueFrom:
+          configMapKeyRef:
+            name: storj-gateway-config
+            key: minio-secret-key
+    resources: 
+      requests:
+        cpu: "100m"  
+        memory: "128Mi" 
+      limits:
+        cpu: "500m"
+        memory: "512Mi" 
+
+

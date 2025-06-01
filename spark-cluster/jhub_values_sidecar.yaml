@@ -1,0 +1,84 @@
+singleuser:
+  cpu:
+    guarantee: 0.1
+  memory:
+    guarantee: 0.5
+  defaultUrl: "/lab"
+  serviceAccountName: spark
+  image:
+    name: remenyi/singleuser
+    tag: v2.0.10
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  cloudMetadata:
+    blockWithIptables: false
+  extraEnv:
+    MINIO_ACCESS_KEY:
+      valueFrom:
+        configMapKeyRef:
+          name: storj-gateway-config 
+          key: minio-access-key
+    MINIO_SECRET_KEY:
+      valueFrom:
+        configMapKeyRef:
+          name: storj-gateway-config
+          key: minio-secret-key
+  extraContainers:
+    - name: storj-gateway-sidecar
+      image: storjlabs/gateway:latest
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "DEBUG: Checking environment variables in sidecar..."
+          if [ -z "$STORJ_ACCESS_GRANT" ] || [ -z "$MINIO_ACCESS_KEY" ] || [ -z "$MINIO_SECRET_KEY" ]; then
+            echo "ERROR: Sidecar credential environment variables are not set from ConfigMap."
+            sleep infinity
+            exit 1
+          fi
+          echo "DEBUG: Sidecar environment variables seem to be set."
+
+          echo "Running Storj Gateway setup in sidecar..."
+          ./gateway setup \
+            --access=$STORJ_ACCESS_GRANT \
+            --minio.access-key=$MINIO_ACCESS_KEY \
+            --minio.secret-key=$MINIO_SECRET_KEY \
+            --non-interactive
+          SETUP_EXIT_CODE=$?
+          if [ $SETUP_EXIT_CODE -ne 0 ]; then
+             echo "ERROR: Sidecar Gateway setup failed with exit code $SETUP_EXIT_CODE."
+             sleep infinity
+             exit 1
+          fi
+
+          echo "Running Storj Gateway in sidecar..."
+          ./gateway run
+      ports:
+        - name: gateway-http
+          containerPort: 7777
+      env:
+        - name: STORJ_ACCESS_GRANT
+          valueFrom:
+            configMapKeyRef:
+              name: storj-gateway-config
+              key: access-grant
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: storj-gateway-config
+              key: minio-access-key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: storj-gateway-config
+              key: minio-secret-key
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+scheduling:
+  userScheduler:
+    enabled: false
+

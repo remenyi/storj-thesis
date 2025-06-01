@@ -1,0 +1,30 @@
+singleuser:
+  cpu:
+    guarantee: 0.2
+  memory:
+    guarantee: 0.6
+    limit: 0.6
+  defaultUrl: "/lab"
+  serviceAccountName: spark
+  image:
+    name: remenyi/singleuser
+    tag: v2.0.8
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  cloudMetadata:
+    blockWithIptables: false
+  extraEnv:
+    MINIO_ACCESS_KEY:
+      valueFrom:
+        configMapKeyRef:
+          name: storj-gateway-config 
+          key: minio-access-key
+    MINIO_SECRET_KEY:
+      valueFrom:
+        configMapKeyRef:
+          name: storj-gateway-config
+          key: minio-secret-key
+scheduling:
+  userScheduler:
+    enabled: false
+
